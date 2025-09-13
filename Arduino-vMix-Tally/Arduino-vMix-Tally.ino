@@ -1,6 +1,7 @@
+
 /*
   vMix wireless tally
-  Copyright 2019 Thomas Mout
+  Copyright 2021 Thomas Mout
 */
 
 #include <EEPROM.h>
@@ -23,6 +24,7 @@ struct Settings
   char ssid[SsidMaxLength];
   char pass[PassMaxLength];
   char hostName[HostNameMaxLength];
+  char hostName2[HostNameMaxLength];
   int tallyNumber;
 };
 
@@ -31,6 +33,7 @@ Settings defaultSettings = {
   "ssid default",
   "pass default",
   "hostname default",
+  "hostname2 default",
   1
 };
 
@@ -60,7 +63,7 @@ static const uint8_t PROGMEM C[] = {B00000000, B01111110, B11111111, B10000001, 
 static const uint8_t PROGMEM L[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000000};
 static const uint8_t PROGMEM P[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000000};
 static const uint8_t PROGMEM S[] = {B00000000, B01001100, B11011110, B10010010, B10010010, B11110110, B01100100, B00000000};
-static const uint8_t PROGMEM O[] = {B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000000};
+static const uint8_t PROGMEM CORNER_DOTS[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000001};
 
 // The WiFi client
 WiFiClient client;
@@ -96,8 +99,15 @@ void loadSettings()
     settings.hostName[i] = EEPROM.read(ptr);
     ptr++;
   }
-
+  
   settings.tallyNumber = EEPROM.read(ptr);
+  ptr++;
+
+  for (int i = 0; i < HostNameMaxLength; i++)
+  {
+    settings.hostName2[i] = EEPROM.read(ptr);
+    ptr++;
+  }
 
   if (strlen(settings.ssid) == 0 || strlen(settings.pass) == 0 || strlen(settings.hostName) == 0 || settings.tallyNumber == 0)
   {
@@ -147,6 +157,13 @@ void saveSettings()
   }
 
   EEPROM.write(ptr, settings.tallyNumber);
+  ptr++;
+
+  for (int i = 0; i < HostNameMaxLength; i++)
+  {
+    EEPROM.write(ptr, settings.hostName2[i]);
+    ptr++;
+  }
 
   EEPROM.commit();
 
@@ -179,6 +196,15 @@ void ledSetIntensity(int intensity)
 void ledSetOff()
 {
   matrix.clear();
+  matrix.writeDisplay();
+}
+
+// Draw corner dots
+void ledSetCornerDots()
+{
+  matrix.clear();
+  matrix.drawBitmap(0, 0, CORNER_DOTS, 8, 8, LED_ON);
+  ledSetIntensity(2);
   matrix.writeDisplay();
 }
 
@@ -221,10 +247,10 @@ void ledSetSettings()
 // Set tally to off
 void tallySetOff()
 {
-  matrix.clear();
-  matrix.drawBitmap(0, 0, O, 8, 8, LED_ON);
-  ledSetIntensity(2);
-  matrix.writeDisplay();
+  Serial.println("Tally off");
+
+  ledSetOff();
+  ledSetCornerDots();
 }
 
 // Set tally to program
@@ -348,6 +374,12 @@ void rootPageHandler()
   response_message += "<label for='hostname' class='col-sm-4 col-form-label'>vMix hostname</label>";
   response_message += "<div class='col-sm-8'>";
   response_message += "<input id='hostname' class='form-control' type='text' size='64' maxlength='64' name='hostname' value='" + String(settings.hostName) + "'>";
+  response_message += "</div></div>";
+
+  response_message += "<div class='form-group row'>";
+  response_message += "<label for='hostname2' class='col-sm-4 col-form-label'>vMix hostname 2</label>";
+  response_message += "<div class='col-sm-8'>";
+  response_message += "<input id='hostname2' class='form-control' type='text' size='64' maxlength='64' name='hostname2' value='" + String(settings.hostName2) + "'>";
   response_message += "</div></div>";
 
   response_message += "<div class='form-group row'>";
