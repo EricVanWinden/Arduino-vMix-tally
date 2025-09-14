@@ -67,6 +67,7 @@ static const uint8_t PROGMEM CORNER_DOTS[] = {B10000001, B00000000, B00000000, B
 
 // The WiFi client
 WiFiClient client;
+WiFiClient client2;
 int timeout = 10;
 int delayTime = 10000;
 
@@ -467,6 +468,15 @@ void handleSave()
     }
   }
 
+  if (httpServer.hasArg("hostname2"))
+  {
+      if (httpServer.arg("hostname2").length() <= HostNameMaxLength)
+      {
+          httpServer.arg("hostname2").toCharArray(settings.hostName2, HostNameMaxLength);
+          doRestart = true;
+      }
+  }
+
   if (httpServer.hasArg("inputnumber"))
   {
     if (httpServer.arg("inputnumber").toInt() > 0 and httpServer.arg("inputnumber").toInt() <= TallyNumberMaxValue)
@@ -541,13 +551,13 @@ void connectToWifi()
 // Connect to vMix instance
 void connectTovMix()
 {
-  Serial.print("Connecting to vMix on ");
+  Serial.print("Connecting to vMix host 1 on ");
   Serial.print(settings.hostName);
   Serial.print("...");
 
   if (client.connect(settings.hostName, port))
   {
-    Serial.println(" Connected!");
+    Serial.println(" Connected host 1!");
     Serial.println("------------");
     
     tallySetOff();
@@ -557,7 +567,26 @@ void connectTovMix()
   }
   else
   {
-    Serial.println(" Not found!");
+    Serial.println(" Host 1 not found!");
+  }
+
+  Serial.print("Connecting to vMix host 2 on ");
+  Serial.print(settings.hostName2);
+  Serial.print("...");
+
+  if (client2.connect(settings.hostName2, port))
+  {
+      Serial.println(" Connected host 2!");
+      Serial.println("------------");
+
+      tallySetOff();
+
+      // Subscribe to the tally events
+      client2.println("SUBSCRIBE TALLY");
+  }
+  else
+  {
+      Serial.println(" Host 2 not found!");
   }
 }
 
