@@ -99,5 +99,7 @@ If it is configured and the Vmix instance is active, the tally will connect to t
 3) The symbol on the display will be "." if both instances are in off mode.
 
 If the second instance is not configured or the second Vmix is inactive, the tally will behave as before.
-<img src="/Pictures/Configuration page.jpg" alt="C" width="50">
+
+The top right corner shows if 1 or 2 instances are connected.
+<img src="/Pictures/Configuration page.jpg" alt="C" width="500">
 

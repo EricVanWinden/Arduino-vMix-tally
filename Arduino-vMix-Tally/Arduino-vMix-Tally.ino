@@ -53,18 +53,21 @@ int port = 8099;
 MLED matrix(4);
 
 // Tally info
-char currentState1 = 0;
-char currentState2 = 0;
+char currentState1 = 'x';
+char currentState2 = 'x';
 const char tallyStateOff = 0;
 const char tallyStateProgram = 1;
 const char tallyStatePreview = 2;
 
 // LED characters
 static const uint8_t PROGMEM C[] = {B00000000, B01111110, B11111111, B10000001, B10000001, B11000011, B01000010, B00000000};
-static const uint8_t PROGMEM L[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000000};
-static const uint8_t PROGMEM P[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000000};
+static const uint8_t PROGMEM L1[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000001};
+static const uint8_t PROGMEM L2[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000011};
+static const uint8_t PROGMEM P1[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000001};
+static const uint8_t PROGMEM P2[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000011};
 static const uint8_t PROGMEM S[] = {B00000000, B01001100, B11011110, B10010010, B10010010, B11110110, B01100100, B00000000};
-static const uint8_t PROGMEM CORNER_DOTS[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000001};
+static const uint8_t PROGMEM CORNER_DOTS1[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000001};
+static const uint8_t PROGMEM CORNER_DOTS2[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000011};
 
 // The WiFi client
 WiFiClient client;
@@ -204,28 +207,50 @@ void ledSetOff()
 }
 
 // Draw corner dots
-void ledSetCornerDots()
+void ledSetCornerDots(int connections)
 {
   matrix.clear();
-  matrix.drawBitmap(0, 0, CORNER_DOTS, 8, 8, LED_ON);
+  if (connections == 2)
+  {
+    matrix.drawBitmap(0, 0, CORNER_DOTS2, 8, 8, LED_ON);
+  }
+  else 
+  {
+    matrix.drawBitmap(0, 0, CORNER_DOTS1, 8, 8, LED_ON);
+  }
+  
   ledSetIntensity(2);
   matrix.writeDisplay();
 }
 
 // Draw L(ive) with LED's
-void ledSetProgram()
+void ledSetProgram(int connections)
 {
   matrix.clear();
-  matrix.drawBitmap(0, 0, L, 8, 8, LED_ON);
+  if (connections == 2)
+  {
+    matrix.drawBitmap(0, 0, L2, 8, 8, LED_ON);
+  }
+  else
+  {
+    matrix.drawBitmap(0, 0, L1, 8, 8, LED_ON);
+  }
   ledSetIntensity(7);
   matrix.writeDisplay();
 }
 
 // Draw P(review) with LED's
-void ledSetPreview()
+void ledSetPreview(int connections)
 {
   matrix.clear();
-  matrix.drawBitmap(0, 0, P, 8, 8, LED_ON);
+  if (connections == 2)
+  {
+    matrix.drawBitmap(0, 0, P2, 8, 8, LED_ON);
+  }
+  else
+  {
+    matrix.drawBitmap(0, 0, P1, 8, 8, LED_ON);
+  }
   ledSetIntensity(2);
   matrix.writeDisplay();
 }
@@ -249,30 +274,30 @@ void ledSetSettings()
 }
 
 // Set tally to off
-void tallySetOff()
+void tallySetOff(int connections)
 {
-  Serial.println("Tally off");
+  Serial.println("Tally off (" + String(connections) + ")");
 
   ledSetOff();
-  ledSetCornerDots();
+  ledSetCornerDots(connections);
 }
 
 // Set tally to program
-void tallySetProgram()
+void tallySetProgram(int connections)
 {
-  Serial.println("Tally program");
+  Serial.println("Tally program (" + String(connections) + ")");
 
   ledSetOff();
-  ledSetProgram();
+  ledSetProgram(connections);
 }
 
 // Set tally to preview
-void tallySetPreview()
+void tallySetPreview(int connections)
 {
-  Serial.println("Tally preview");
+  Serial.println("Tally preview (" + String(connections) + ")");
 
   ledSetOff();
-  ledSetPreview();
+  ledSetPreview(connections);
 }
 
 // Set tally to connecting
@@ -324,18 +349,21 @@ void handleData2(String data)
 
 void stateUpdated() 
 {
+  int connections = 0;
+  if (currentState1 != 'x') connections++;
+  if (currentState2 != 'x') connections++;
   Serial.println("State1 = " + String(currentState1) + " State2 = " + String(currentState2));
   if (currentState1 == '1' || currentState2 == '1') 
   {
-    tallySetProgram();
+    tallySetProgram(connections);
   } 
   else if (currentState1 == '2' || currentState2 == '2') 
   {
-    tallySetPreview();
+    tallySetPreview(connections);
   } 
   else 
   {
-    tallySetOff();
+    tallySetOff(connections);
   }
 }
 
@@ -360,7 +388,7 @@ void apStart()
   apEnabled = true;
 }
 
-// Hanle http server root request
+// Handle http server root request
 void rootPageHandler()
 {
   String response_message = "<!DOCTYPE html>";
@@ -584,7 +612,7 @@ void connectTovMix()
     Serial.println(" Connected host 1!");
     Serial.println("------------");
     
-    tallySetOff();
+    tallySetOff(1);
 
     // Subscribe to the tally events
     client.println("SUBSCRIBE TALLY");
@@ -592,6 +620,7 @@ void connectTovMix()
   else
   {
     Serial.println(" Host 1 not found!");
+    currentState1 = 'x';
   }
 
   Serial.print("Connecting to vMix host 2 on ");
@@ -603,14 +632,15 @@ void connectTovMix()
       Serial.println(" Connected host 2!");
       Serial.println("------------");
 
-      tallySetOff();
+      tallySetOff(2);
 
       // Subscribe to the tally events
       client2.println("SUBSCRIBE TALLY");
   }
   else
   {
-      Serial.println(" Host 2 not found!");
+    Serial.println(" Host 2 not found!");
+    currentState2 = 'x';
   }
 }
 
@@ -674,6 +704,13 @@ void loop()
   {
     String data = client2.readStringUntil('\r\n');
     handleData2(data);
+  }
+
+  if (!client2.connected() && currentState2 != 'x')
+  {
+    currentState2 = 'x';
+    stateUpdated();
+    // The connection to vMix 2 is optional, so no attempt to reconnect. 
   }
 
   if (!client.connected() && !apEnabled && millis() > lastCheck + interval)
