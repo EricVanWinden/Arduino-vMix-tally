@@ -53,7 +53,8 @@ int port = 8099;
 MLED matrix(4);
 
 // Tally info
-char currentState = -1;
+char currentState1 = 0;
+char currentState2 = 0;
 const char tallyStateOff = 0;
 const char tallyStateProgram = 1;
 const char tallyStatePreview = 2;
@@ -183,6 +184,8 @@ void printSettings()
   Serial.println(settings.pass);
   Serial.print("vMix hostname: ");
   Serial.println(settings.hostName);
+  Serial.print("vMix hostname 2: ");
+  Serial.println(settings.hostName2);
   Serial.print("Tally number: ");
   Serial.println(settings.tallyNumber);
 }
@@ -279,39 +282,60 @@ void tallySetConnecting()
   ledSetConnecting();
 }
 
-// Handle incoming data
-void handleData(String data)
+// Handle incoming data Vmix 1
+void handleData1(String data)
 {
   // Check if server data is tally data
   if (data.indexOf("TALLY") == 0)
   {
     char newState = data.charAt(settings.tallyNumber + 8);
-
-    // Check if tally state has changed
-    if (currentState != newState)
+    if (currentState1 != newState)
     {
-      currentState = newState;
-
-      switch (currentState)
-      {
-        case '0':
-          tallySetOff();
-          break;
-        case '1':
-          tallySetProgram();
-          break;
-        case '2':
-          tallySetPreview();
-          break;
-        default:
-          tallySetOff();
-      }
+      currentState1 = newState;
+      stateUpdated();
     }
   }
   else
   {
-    Serial.print("Response from vMix: ");
+    Serial.print("Response from vMix 1: ");
     Serial.println(data);
+  }
+}
+
+// Handle incoming data Vmix 2
+void handleData2(String data)
+{
+  // Check if server data is tally data
+  if (data.indexOf("TALLY") == 0)
+  {
+    char newState = data.charAt(settings.tallyNumber + 8);
+    if (currentState2 != newState)
+    {
+      currentState2 = newState;
+      stateUpdated();
+    }
+  }
+  else
+  {
+    Serial.print("Response from vMix 2: ");
+    Serial.println(data);
+  }
+}
+
+void stateUpdated() 
+{
+  Serial.println("State1 = " + String(currentState1) + " State2 = " + String(currentState2));
+  if (currentState1 == '1' || currentState2 == '1') 
+  {
+    tallySetProgram();
+  } 
+  else if (currentState1 == '2' || currentState2 == '2') 
+  {
+    tallySetPreview();
+  } 
+  else 
+  {
+    tallySetOff();
   }
 }
 
@@ -640,11 +664,16 @@ void setup()
 void loop()
 {
   httpServer.handleClient();
-
   while (client.available())
   {
     String data = client.readStringUntil('\r\n');
-    handleData(data);
+	  handleData1(data);
+  }
+
+  while (client2.available())
+  {
+    String data = client2.readStringUntil('\r\n');
+    handleData2(data);
   }
 
   if (!client.connected() && !apEnabled && millis() > lastCheck + interval)

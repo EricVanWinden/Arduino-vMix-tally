@@ -89,3 +89,15 @@ Please note all images are for illustration purpose. Actual results may vary.
 Feel free open issues on this repository for bugs or feature requests.  
 If you want to create your own version of this repository then a reference is appreciated.  
 Special thanks to André for the 3D casing and the solder instructions.  
+
+## Update September 2025 Eric van Winden
+
+You can now specify an optional connection to a second VMix instance.
+If it is configured and the Vmix instance is active, the tally will connect to this instance as well.
+1) The symbol on the display will be "L" if either of the two instances is in live mode.
+2) The symbol on the display will be "P" if either of the two instances is in preview mode.
+3) The symbol on the display will be "." if both instances are in off mode.
+
+If the second instance is not configured or the second Vmix is inactive, the tally will behave as before.
+<img src="/Pictures/Configuration page.jpg" alt="C" width="50">
+
