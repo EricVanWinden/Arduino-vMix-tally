@@ -24,8 +24,9 @@ struct Settings
   char ssid[SsidMaxLength];
   char pass[PassMaxLength];
   char hostName[HostNameMaxLength];
-  char hostName2[HostNameMaxLength];
   int tallyNumber;
+  char hostName2[HostNameMaxLength];
+  int tallyNumber2;
 };
 
 // Default settings object
@@ -33,6 +34,7 @@ Settings defaultSettings = {
   "ssid default",
   "pass default",
   "hostname default",
+  1,
   "hostname2 default",
   1
 };
@@ -114,6 +116,9 @@ void loadSettings()
     ptr++;
   }
 
+  settings.tallyNumber2 = EEPROM.read(ptr);
+  ptr++;
+
   if (strlen(settings.ssid) == 0 || strlen(settings.pass) == 0 || strlen(settings.hostName) == 0 || settings.tallyNumber == 0)
   {
     Serial.println("No settings found");
@@ -170,6 +175,9 @@ void saveSettings()
     ptr++;
   }
 
+  EEPROM.write(ptr, settings.tallyNumber2);
+  ptr++;
+
   EEPROM.commit();
 
   Serial.println("Settings saved");
@@ -187,10 +195,12 @@ void printSettings()
   Serial.println(settings.pass);
   Serial.print("vMix hostname: ");
   Serial.println(settings.hostName);
-  Serial.print("vMix hostname 2: ");
-  Serial.println(settings.hostName2);
   Serial.print("Tally number: ");
   Serial.println(settings.tallyNumber);
+  Serial.print("vMix hostname 2: ");
+  Serial.println(settings.hostName2);
+  Serial.print("Tally number 2: ");
+  Serial.println(settings.tallyNumber2);
 }
 
 // Set led intensity from 0 to 7
@@ -333,7 +343,7 @@ void handleData2(String data)
   // Check if server data is tally data
   if (data.indexOf("TALLY") == 0)
   {
-    char newState = data.charAt(settings.tallyNumber + 8);
+    char newState = data.charAt(settings.tallyNumber2 + 8);
     if (currentState2 != newState)
     {
       currentState2 = newState;
@@ -430,15 +440,21 @@ void rootPageHandler()
   response_message += "</div></div>";
 
   response_message += "<div class='form-group row'>";
+  response_message += "<label for='inputnumber' class='col-sm-4 col-form-label'>Input number (1-1000)</label>";
+  response_message += "<div class='col-sm-8'>";
+  response_message += "<input id='inputnumber' class='form-control' type='number' size='64' min='0' max='1000' name='inputnumber' value='" + String(settings.tallyNumber) + "'>";
+  response_message += "</div></div>";
+
+  response_message += "<div class='form-group row'>";
   response_message += "<label for='hostname2' class='col-sm-4 col-form-label'>vMix hostname 2</label>";
   response_message += "<div class='col-sm-8'>";
   response_message += "<input id='hostname2' class='form-control' type='text' size='64' maxlength='64' name='hostname2' value='" + String(settings.hostName2) + "'>";
   response_message += "</div></div>";
 
   response_message += "<div class='form-group row'>";
-  response_message += "<label for='inputnumber' class='col-sm-4 col-form-label'>Input number (1-1000)</label>";
+  response_message += "<label for='inputnumber2' class='col-sm-4 col-form-label'>Input number 2 (1-1000)</label>";
   response_message += "<div class='col-sm-8'>";
-  response_message += "<input id='inputnumber' class='form-control' type='number' size='64' min='0' max='1000' name='inputnumber' value='" + String(settings.tallyNumber) + "'>";
+  response_message += "<input id='inputnumber2' class='form-control' type='number' size='64' min='0' max='1000' name='inputnumber2' value='" + String(settings.tallyNumber2) + "'>";
   response_message += "</div></div>";
 
   response_message += "<input type='submit' value='SAVE' class='btn btn-primary'></form>";
@@ -520,6 +536,15 @@ void handleSave()
     }
   }
 
+  if (httpServer.hasArg("inputnumber"))
+  {
+    if (httpServer.arg("inputnumber").toInt() > 0 and httpServer.arg("inputnumber").toInt() <= TallyNumberMaxValue)
+    {
+      settings.tallyNumber = httpServer.arg("inputnumber").toInt();
+      doRestart = true;
+    }
+  }
+
   if (httpServer.hasArg("hostname2"))
   {
       if (httpServer.arg("hostname2").length() <= HostNameMaxLength)
@@ -529,11 +554,11 @@ void handleSave()
       }
   }
 
-  if (httpServer.hasArg("inputnumber"))
+  if (httpServer.hasArg("inputnumber2"))
   {
-    if (httpServer.arg("inputnumber").toInt() > 0 and httpServer.arg("inputnumber").toInt() <= TallyNumberMaxValue)
+    if (httpServer.arg("inputnumber2").toInt() > 0 and httpServer.arg("inputnumber2").toInt() <= TallyNumberMaxValue)
     {
-      settings.tallyNumber = httpServer.arg("inputnumber").toInt();
+      settings.tallyNumber2 = httpServer.arg("inputnumber2").toInt();
       doRestart = true;
     }
   }
