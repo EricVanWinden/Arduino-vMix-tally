@@ -57,19 +57,14 @@ MLED matrix(4);
 // Tally info
 char currentState1 = 'x';
 char currentState2 = 'x';
-const char tallyStateOff = 0;
-const char tallyStateProgram = 1;
-const char tallyStatePreview = 2;
 
 // LED characters
 static const uint8_t PROGMEM C[] = {B00000000, B01111110, B11111111, B10000001, B10000001, B11000011, B01000010, B00000000};
-static const uint8_t PROGMEM L1[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000001};
-static const uint8_t PROGMEM L2[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000011};
-static const uint8_t PROGMEM P1[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000001};
-static const uint8_t PROGMEM P2[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000011};
+static const uint8_t PROGMEM L[] = {B00000000, B11111111, B11111111, B11000000, B11000000, B11000000, B11000000, B00000000};
+static const uint8_t PROGMEM P[] = {B00000000, B11111111, B11111111, B00010001, B00010001, B00011111, B00001110, B00000000};
 static const uint8_t PROGMEM S[] = {B00000000, B01001100, B11011110, B10010010, B10010010, B11110110, B01100100, B00000000};
-static const uint8_t PROGMEM CORNER_DOTS1[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000001};
-static const uint8_t PROGMEM CORNER_DOTS2[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000011};
+static const uint8_t PROGMEM CORNER_DOTS[] = {B10000001, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000001};
+
 
 // The WiFi client
 WiFiClient client;
@@ -217,52 +212,58 @@ void ledSetOff()
 }
 
 // Draw corner dots
-void ledSetCornerDots(int connections)
+void ledSetCornerDots()
 {
   matrix.clear();
-  if (connections == 2)
-  {
-    matrix.drawBitmap(0, 0, CORNER_DOTS2, 8, 8, LED_ON);
-  }
-  else 
-  {
-    matrix.drawBitmap(0, 0, CORNER_DOTS1, 8, 8, LED_ON);
-  }
-  
+  matrix.drawBitmap(0, 0, CORNER_DOTS, 8, 8, LED_ON);  
   ledSetIntensity(2);
   matrix.writeDisplay();
 }
 
 // Draw L(ive) with LED's
-void ledSetProgram(int connections)
+void ledSetProgram()
 {
   matrix.clear();
-  if (connections == 2)
-  {
-    matrix.drawBitmap(0, 0, L2, 8, 8, LED_ON);
-  }
-  else
-  {
-    matrix.drawBitmap(0, 0, L1, 8, 8, LED_ON);
-  }
+  matrix.drawBitmap(0, 0, L, 8, 8, LED_ON);
   ledSetIntensity(7);
+  ledSetState();
   matrix.writeDisplay();
 }
 
 // Draw P(review) with LED's
-void ledSetPreview(int connections)
+void ledSetPreview()
 {
   matrix.clear();
-  if (connections == 2)
-  {
-    matrix.drawBitmap(0, 0, P2, 8, 8, LED_ON);
-  }
-  else
-  {
-    matrix.drawBitmap(0, 0, P1, 8, 8, LED_ON);
-  }
+  matrix.drawBitmap(0, 0, P, 8, 8, LED_ON);
   ledSetIntensity(2);
+  ledSetState();
   matrix.writeDisplay();
+}
+
+void ledSetState()
+{
+    if (currentState1 == '1')
+    {
+      // instance 1 live, show 2 dots left
+      matrix.drawPixel(6, 0, LED_ON);
+      matrix.drawPixel(7, 0, LED_ON);
+    }
+    if (currentState1 == '2')
+    {
+      // instance 1 preview, show 1 dots left
+      matrix.drawPixel(6, 0, LED_ON);
+    }
+    if (currentState2 == '1')
+    {
+      // instance 2 live, show 2 dots right
+      matrix.drawPixel(6, 7, LED_ON);
+      matrix.drawPixel(7, 7, LED_ON);
+    }
+    if (currentState2 == '2')
+    {
+      // instance 2 preview, show 1 dot right
+      matrix.drawPixel(6, 7, LED_ON);
+    }
 }
 
 // Draw C(onnecting) with LED's
@@ -284,30 +285,30 @@ void ledSetSettings()
 }
 
 // Set tally to off
-void tallySetOff(int connections)
+void tallySetOff()
 {
-  Serial.println("Tally off (" + String(connections) + ")");
+  Serial.println("Tally off");
 
   ledSetOff();
-  ledSetCornerDots(connections);
+  ledSetCornerDots();
 }
 
 // Set tally to program
-void tallySetProgram(int connections)
+void tallySetProgram()
 {
-  Serial.println("Tally program (" + String(connections) + ")");
+  Serial.println("Tally program");
 
   ledSetOff();
-  ledSetProgram(connections);
+  ledSetProgram();
 }
 
 // Set tally to preview
-void tallySetPreview(int connections)
+void tallySetPreview()
 {
-  Serial.println("Tally preview (" + String(connections) + ")");
+  Serial.println("Tally preview");
 
   ledSetOff();
-  ledSetPreview(connections);
+  ledSetPreview();
 }
 
 // Set tally to connecting
@@ -359,21 +360,18 @@ void handleData2(String data)
 
 void stateUpdated() 
 {
-  int connections = 0;
-  if (currentState1 != 'x') connections++;
-  if (currentState2 != 'x') connections++;
   Serial.println("State1 = " + String(currentState1) + " State2 = " + String(currentState2));
   if (currentState1 == '1' || currentState2 == '1') 
   {
-    tallySetProgram(connections);
+    tallySetProgram();
   } 
   else if (currentState1 == '2' || currentState2 == '2') 
   {
-    tallySetPreview(connections);
+    tallySetPreview();
   } 
   else 
   {
-    tallySetOff(connections);
+    tallySetOff();
   }
 }
 
@@ -637,7 +635,7 @@ void connectTovMix()
     Serial.println(" Connected host 1!");
     Serial.println("------------");
     
-    tallySetOff(1);
+    tallySetOff();
 
     // Subscribe to the tally events
     client.println("SUBSCRIBE TALLY");
@@ -657,7 +655,7 @@ void connectTovMix()
       Serial.println(" Connected host 2!");
       Serial.println("------------");
 
-      tallySetOff(2);
+      tallySetOff();
 
       // Subscribe to the tally events
       client2.println("SUBSCRIBE TALLY");
@@ -722,7 +720,7 @@ void loop()
   while (client.available())
   {
     String data = client.readStringUntil('\r\n');
-	  handleData1(data);
+	handleData1(data);
   }
 
   while (client2.available())
@@ -731,18 +729,12 @@ void loop()
     handleData2(data);
   }
 
-  if (!client2.connected() && currentState2 != 'x')
-  {
-    currentState2 = 'x';
-    stateUpdated();
-    // The connection to vMix 2 is optional, so no attempt to reconnect. 
-  }
-
-  if (!client.connected() && !apEnabled && millis() > lastCheck + interval)
+  if (!client.connected() && !client2.connected() && !apEnabled && millis() > lastCheck + interval)
   {
     tallySetConnecting();
 
     client.stop();
+    client2.stop();
 
     connectTovMix();
     lastCheck = millis();
