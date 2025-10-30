@@ -624,47 +624,53 @@ void connectToWifi()
 }
 
 // Connect to vMix instance
-void connectTovMix()
+void connectTovMix(const bool flags[])
 {
-  Serial.print("Connecting to vMix host 1 on ");
-  Serial.print(settings.hostName);
-  Serial.print("...");
-
-  if (client.connect(settings.hostName, port))
+  int count = 0;
+  if (!flags[0])
   {
-    Serial.println(" Connected host 1!");
-    Serial.println("------------");
-    
-    tallySetOff();
+    Serial.print("Connecting to vMix host 1 on ");
+    Serial.print(settings.hostName);
+    Serial.print("...");
 
-    // Subscribe to the tally events
-    client.println("SUBSCRIBE TALLY");
+    if (client.connect(settings.hostName, port))
+    {
+      Serial.println(" Connected host 1!");
+      Serial.println("------------");
+      client.println("SUBSCRIBE TALLY");
+      count++;
+    }
+    else
+    {
+      Serial.println(" Host 1 not found!");
+      currentState1 = 'x';
+    }
   }
-  else
-  {
-    Serial.println(" Host 1 not found!");
-    currentState1 = 'x';
-  }
 
-  Serial.print("Connecting to vMix host 2 on ");
-  Serial.print(settings.hostName2);
-  Serial.print("...");
-
-  if (client2.connect(settings.hostName2, port))
+  if (!flags[1])
   {
+    Serial.print("Connecting to vMix host 2 on ");
+    Serial.print(settings.hostName2);
+    Serial.print("...");
+
+    if (client2.connect(settings.hostName2, port))
+    {
       Serial.println(" Connected host 2!");
       Serial.println("------------");
-
-      tallySetOff();
-
-      // Subscribe to the tally events
       client2.println("SUBSCRIBE TALLY");
+      count++;
+    }
+    else
+    {
+      Serial.println(" Host 2 not found!");
+      currentState2 = 'x';
+    }
   }
-  else
+  if(count > 0)
   {
-    Serial.println(" Host 2 not found!");
-    currentState2 = 'x';
+    stateUpdated();
   }
+
 }
 
 void restart()
@@ -696,7 +702,8 @@ void start()
 
   if (WiFi.status() == WL_CONNECTED)
   {
-    connectTovMix();
+    bool flags[2] = { false, false };
+    connectTovMix(flags);
   }
 }
 
@@ -720,7 +727,7 @@ void loop()
   while (client.available())
   {
     String data = client.readStringUntil('\r\n');
-	handleData1(data);
+	  handleData1(data);
   }
 
   while (client2.available())
@@ -729,14 +736,31 @@ void loop()
     handleData2(data);
   }
 
-  if (!client.connected() && !client2.connected() && !apEnabled && millis() > lastCheck + interval)
+  bool flags[2] = {client.connected(), client2.connected()};
+  if(flags[0] && flags[1])
   {
-    tallySetConnecting();
+	  return;
+  }
 
-    client.stop();
-    client2.stop();
-
-    connectTovMix();
+  if (!apEnabled && millis() > lastCheck + interval)
+  {
+    int active = 2;
+    if (!flags[0])
+    {
+        client.stop();
+        active--;
+    }
+    if (!flags[1])
+    {
+        client2.stop();
+        active--;
+    }
+    if (active == 0) 
+    {
+      tallySetConnecting();
+    }
+    
+    connectTovMix(flags);
     lastCheck = millis();
   }
 }
